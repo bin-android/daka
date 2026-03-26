@@ -1,0 +1,53 @@
+{
+	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "今日能量",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/energy-card/index",
+			"style": {
+				"navigationBarTitleText": "今日能量卡",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/analyze/index",
+			"style": {
+				"navigationBarTitleText": "测字",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/analyze-result/index",
+			"style": {
+				"navigationBarTitleText": "测字结果",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/records/index",
+			"style": {
+				"navigationBarTitleText": "我的记录",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/profile/index",
+			"style": {
+				"navigationBarTitleText": "我的",
+				"navigationStyle": "custom"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "uni-app",
+		"navigationBarBackgroundColor": "#F8F8F8",
+		"backgroundColor": "#F8F8F8"
+	},
+	"uniIdRouter": {}
+}
