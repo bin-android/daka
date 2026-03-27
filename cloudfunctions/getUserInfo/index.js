@@ -5,6 +5,12 @@ cloud.init({
   env: cloud.DYNAMIC_CURRENT_ENV
 })
 
+function isGenericNick(nickName) {
+  if (!nickName) return true
+  const n = String(nickName).trim().toLowerCase()
+  return n === '微信用户' || n === 'wechat user' || n === 'wx user' || n === '用户'
+}
+
 // 云函数入口函数
 exports.main = async (event) => {
   const action = event && event.action ? event.action : 'get'
@@ -16,8 +22,16 @@ exports.main = async (event) => {
 
   try {
     if (action === 'upsert') {
-      const nickName = event && event.nickName ? String(event.nickName).trim() : ''
+      let nickName = event && event.nickName ? String(event.nickName).trim() : ''
       const avatarUrl = event && event.avatarUrl ? String(event.avatarUrl).trim() : ''
+
+      const current = await users.where({ _openid: openId }).limit(1).get()
+      const currentUser = current.data && current.data.length > 0 ? current.data[0] : null
+
+      // 昵称保护：当本次拿到的是通用/降级昵称时，不覆盖已有更优昵称
+      if ((!nickName || isGenericNick(nickName)) && currentUser && currentUser.nickName && !isGenericNick(currentUser.nickName)) {
+        nickName = currentUser.nickName
+      }
 
       if (!nickName) {
         return {
@@ -27,15 +41,14 @@ exports.main = async (event) => {
         }
       }
 
-      const current = await users.where({ _openid: openId }).limit(1).get()
       const payload = {
         nickName,
-        avatarUrl,
+        avatarUrl: avatarUrl || (currentUser && currentUser.avatarUrl) || '',
         updatedAt: now
       }
 
-      if (current.data && current.data.length > 0) {
-        await users.doc(current.data[0]._id).update({
+      if (currentUser) {
+        await users.doc(currentUser._id).update({
           data: payload
         })
       } else {
@@ -58,7 +71,6 @@ exports.main = async (event) => {
       }
     }
   } catch (err) {
-    console.error(err)
     return {
       code: -1,
       msg: err.message || 'cloud function error',

@@ -275,7 +275,7 @@
 				// #ifdef MP-WEIXIN
 				try {
 					const res = await callCloud('getUserInfo', { action: 'get' })
-					const userInfo = res && res.data ? res.data.userInfo : null
+					const userInfo = (res && res.data && res.data.userInfo) || (res && res.userInfo) || null
 					if (userInfo && userInfo.nickName) {
 						this.isGuest = false
 						this.displayName = userInfo.nickName
@@ -301,28 +301,54 @@
 				// #endif
 
 				// #ifdef MP-WEIXIN
+				if (typeof uni.getUserProfile !== 'function') {
+					uni.showToast({ title: '当前微信版本不支持授权接口', icon: 'none' })
+					return
+				}
 				uni.getUserProfile({
 					desc: '用于完善会员资料',
 					success: async (res) => {
+						console.log('[profile] getUserProfile success', res)
 						try {
 							const info = res && res.userInfo ? res.userInfo : {}
+							const rawNickName = info.nickName ? String(info.nickName).trim() : ''
+							const rawAvatarUrl = info.avatarUrl ? String(info.avatarUrl).trim() : ''
+							if (!rawNickName) {
+								uni.showToast({ title: '未获取到昵称，请重试', icon: 'none' })
+								return
+							}
 							const saveRes = await callCloud('getUserInfo', {
 								action: 'upsert',
-								nickName: info.nickName || '微信用户',
-								avatarUrl: info.avatarUrl || ''
+								nickName: rawNickName,
+								avatarUrl: rawAvatarUrl
 							})
-							if (saveRes && saveRes.code === 0) {
+							console.log('[profile] upsert user result', saveRes)
+							const isUpsertSuccess = !!(saveRes && saveRes.code === 0)
+							const savedUser = saveRes && saveRes.data ? saveRes.data.userInfo : null
+							if (isUpsertSuccess) {
 								uni.showToast({ title: '登录成功', icon: 'none' })
+								this.isGuest = false
+								this.displayName = (savedUser && savedUser.nickName) || rawNickName
+								this.joinText = '已授权登录'
+								this.displayAvatar = (savedUser && savedUser.avatarUrl) || rawAvatarUrl || this.defaultAvatarUrl
 								this.loadUserProfile()
 							} else {
-								uni.showToast({ title: '登录失败，请稍后重试', icon: 'none' })
+								const errMsg = saveRes && saveRes.msg ? saveRes.msg : '登录失败，请稍后重试'
+								uni.showToast({ title: errMsg.slice(0, 20), icon: 'none' })
 							}
 						} catch (e) {
+							console.error('[profile] upsert user failed', e)
 							uni.showToast({ title: '登录失败，请稍后重试', icon: 'none' })
 						}
 					},
-					fail: () => {
-						uni.showToast({ title: '你已取消授权', icon: 'none' })
+					fail: (err) => {
+						console.error('[profile] getUserProfile failed', err)
+						const msg = err && err.errMsg ? err.errMsg : '授权失败'
+						if (msg.indexOf('auth deny') > -1 || msg.indexOf('auth denied') > -1) {
+							uni.showToast({ title: '你已取消授权', icon: 'none' })
+							return
+						}
+						uni.showToast({ title: msg.slice(0, 20), icon: 'none' })
 					}
 				})
 				// #endif
